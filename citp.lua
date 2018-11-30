@@ -13,6 +13,104 @@ count = 0
 found_ports = {}
 win = nil
 
+-- Value Strings for Fields
+local citp_base_contentTypes = {
+-- CITP
+  --[[MSEX]] [0x4D534558] = "Media Server Extensions",
+  --[[PINF]] [0x50494E46] = "Peer Information layer",
+  --[[PNam]] [0x504E616D] = "Peer Name message",
+  --[[PLoc]] [0x504C6F63] = "Peer Location message",
+-- MSEX
+  --[[CInf]] [0x43496E66] = "Client Information Message",
+  --[[SInf]] [0x53496E66] = "Server Information Message",
+  --[[Nack]] [0x4E61636B] = "Negative Acknowledge Message",
+  --[[LSta]] [0x4C537461] = "Layer Status Message",
+  --[[StFr]] [0x53744672] = "Stream Frame message",
+  --[[RqSt]] [0x52715374] = "Request Stream message",
+  --[[GEIn]] [0x4745496E] = "Get Element Information message",
+  --[[MEIn]] [0x4D45496E] = "Media Element Information message",
+  --[[GETh]] [0x47455468] = "Get Element Thumbnail message",
+  --[[EThn]] [0x4554686E] = "Element Thumbnail message",
+  --[[ELIn]] [0x454C496E] = "Element Library Information message",
+  --[[GELI]] [0x47454C49] = "Get Element Library Information message",
+  --[[GELT]] [0x47454C54] = "Get Element Library Thumbnail message",
+  --[[GVSr]] [0x47565372] = "GetVideoSources",
+  --[[VSrc]] [0x56537263] = "Video Sources",
+-- Other
+  --[[CAEX]] [0x43414558] = "Capture Extensions"
+}
+
+local citp_caex_contentTypes = {
+-- Live Views
+  [0x00000100] = "Get Live View Status",
+  [0x00000101] = "Live View Status",
+  [0x00000200] = "Get Live View Image",
+  [0x00000201] = "Live View Image",
+	 	 		-- Cue recording
+  [0x00010100] = "Set Cue Recording Capabilities",
+  [0x00010200] = "Record Cue",
+  [0x00010300] = "Set Recorder Clearing Capabilities",
+  [0x00010400] = "Clear Recorder",
+	 	 		-- Show Synchronization
+  [0x00020100] = "Enter Show",
+  [0x00020101] = "Leave Show",
+  [0x00020200] = "Fixture List Request",
+  [0x00020201] = "Fixture List",
+  [0x00020204] = "Fixture Identify",
+  [0x00020202] = "Fixture Modify",
+  [0x00020203] = "Fixture Remove",
+  [0x00020300] = "Fixture Selection",
+  [0x00020400] = "Fixture Console Status",
+	 	 		-- Laser Feeds
+  [0x00030100] = "Get Laser Feed List",
+  [0x00030101] = "Laser Feed List",
+  [0x00030102] = "Laser Feed Control",
+  [0x00030200] = "Laser Feed Frame",
+}
+
+local citp_pinf_contentTypes = {
+  --[[PNam]] [0x504e616d] = "Peer Name",
+  --[[PLoc]] [0x504c6f63] = "Peer Location",
+}
+-- CITP Base Fields
+local citp_base_versionMajor_field    = ProtoField.uint8(   "citp.versionMajor", "Major Version", base.DEC)
+local citp_base_versionMinor_field    = ProtoField.uint8(   "citp.versionMinor", "Minor Version", base.DEC)
+local citp_base_reqRespID_field       = ProtoField.uint16(  "citp.reqRespID",    "Request/Response ID", base.HEX)
+local citp_base_msgPartCount_field    = ProtoField.uint16(  "citp.msgPartCount", "Message Part Count", base.HEX)
+local citp_base_msgPart_field         = ProtoField.uint16(  "citp.msgPart",      "Message Part", base.HEX)
+local citp_base_contentType_field     = ProtoField.uint32(  "citp.contentType",  "Content Type", base.HEX, citp_base_contentTypes)
+                                                            
+-- CAEX Fields                                              
+local citp_caex_contentType_field     = ProtoField.uint32(  "citp.caex.contentType",  "Content Type", base.HEX, citp_caex_contentTypes)
+local citp_caex_laser_sourceKey_field = ProtoField.uint32(  "citp.caex.laser.sourceKey",  "Source Key", base.HEX)
+local citp_caex_laser_feedIndex_field = ProtoField.uint8(   "citp.caex.laser.feedIndex",  "Feed Index", base.DEC)
+                                                            
+-- PINF Fields                                              
+local citp_pinf_contentType_field     = ProtoField.uint32(  "citp.pinf.contentType", "Content Type", base.HEX, citp_pinf_contentTypes)
+local citp_pinf_name_field            = ProtoField.stringz( "citp.pinf.name", "Peer Name", base.ASCII)
+local citp_pinf_type_field            = ProtoField.stringz( "citp.pinf.type", "Peer Type", base.ASCII)
+local citp_pinf_state_field           = ProtoField.stringz( "citp.pinf.state", "Peer State", base.ASCII)
+local citp_pinf_listPort_field        = ProtoField.uint16(  "citp.pinf.listeningPort", "Listening Port", base.DEC)
+
+citp_proto.fields = {
+  citp_base_versionMajor_field,
+  citp_base_versionMinor_field,
+  citp_base_reqRespID_field,
+  citp_base_msgPartCount_field,
+  citp_base_msgPart_field,
+  citp_base_contentType_field,
+  
+  citp_caex_contentType_field,
+  citp_caex_laser_sourceKey_field,
+  citp_caex_laser_feedIndex_field,
+  
+  citp_pinf_contentType_field,
+  citp_pinf_name_field,
+  citp_pinf_type_field,
+  citp_pinf_state_field,
+  citp_pinf_listPort_field,
+}
+
 ct = {
   -- CITP
   MSEX = "Media Server Extensions",
@@ -39,33 +137,7 @@ ct = {
   CAEX = "Capture Extensions"
 }
 
--- Capture specific CITP extension content codes
-caex_ct = {}
--- Live Views
-caex_ct[0x00000100] = "Get Live View Status"
-caex_ct[0x00000101] = "Live View Status"
-caex_ct[0x00000200] = "Get Live View Image"
-caex_ct[0x00000201] = "Live View Image"
--- Cue recording
-caex_ct[0x00010100] = "Set Cue Recording Capabilities"
-caex_ct[0x00010200] = "Record Cue"
-caex_ct[0x00010300] = "Set Recorder Clearing Capabilities"
-caex_ct[0x00010400] = "Clear Recorder"
--- Show Synchronization
-caex_ct[0x00020100] = "Enter Show"
-caex_ct[0x00020101] = "Leave Show"
-caex_ct[0x00020200] = "Fixture List Request"
-caex_ct[0x00020201] = "Fixture List"
-caex_ct[0x00020204] = "Fixture Identify"
-caex_ct[0x00020202] = "Fixture Modify"
-caex_ct[0x00020203] = "Fixture Remove"
-caex_ct[0x00020300] = "Fixture Selection"
-caex_ct[0x00020400] = "Fixture Console Status"
--- Laser Feeds
-caex_ct[0x00030100] = "Get Laser Feed List"
-caex_ct[0x00030101] = "Laser Feed List"
-caex_ct[0x00030102] = "Laser Feed Control"
-caex_ct[0x00030200] = "Laser Feed Frame"
+
 
 
 
@@ -80,6 +152,101 @@ lt = {
   "Image presets",
   "3D meshes"
 }
+
+-- CAEX ------------------------------------------------------------------------
+-- Capture CITP Extensions
+--------------------------------------------------------------------------------
+function caex_dissector(buffer, pinfo, subtree)
+  pinfo.cols.info:append ("CAEX >")   -- info
+    
+  caex_code = buffer(4,4):le_uint()
+  str = citp_caex_contentTypes[caex_code] or "(Unknown)"
+  
+  pinfo.cols.info:append (str)
+
+  subtree:add_le(citp_caex_contentType_field, buffer(4,4))
+  
+  if str == "Laser Feed List" then
+    subtree:add_le( citp_caex_laser_sourceKey, buffer(8,4)) 
+    nFeeds = buffer(12,1):le_uint()
+    subtree:add_le( buffer(12,1),"Feed Count: " .. buffer(12,1):le_uint())
+    
+    feedNameStart = 13
+  
+    for i=1,nFeeds do
+      str, l = ucs2ascii(feedNameStart, buffer)
+      subtree:add("Feed " .. (i) .. ": " .. str)
+      feedNameStart = feedNameStart + l
+    end
+    
+  elseif str == "Laser Feed Frame" then
+    pinfo.cols.info:append (" >Feed " .. buffer(12,1):le_uint())
+    subtree:add_le( citp_caex_laser_sourceKey_field, buffer(8,4)) 
+    subtree:add( citp_caex_laser_feedIndex_field, buffer(12,1))
+    subtree:add( "Frame Seq Num: " .. buffer(13,4):le_uint())
+    subtree:add( "Point Count: " .. buffer(17,2):le_uint())
+    
+  elseif str == "Laser Feed Control" then
+    pinfo.cols.info:append (" >Feed " .. buffer(8,1):le_uint())
+    subtree:add( citp_caex_laser_feedIndex, buffer(8,1))
+	framerate = buffer(9,1):le_uint()
+	if framerate == 0 then
+	  subtree:add( "Framerate: DISABLED")
+	else
+      subtree:add( "Framerate: " .. framerate)
+	end
+  
+  end
+end
+
+-- PINF ------------------------------------------------------------------------
+-- Peer Information layer
+--------------------------------------------------------------------------------
+function pinf_dissector(buffer, pinfo, subtree)
+  name=""
+  pinfo.cols.info:append ("PINF >")   -- info
+  str = ct[buffer(4,4):string()] or "(Unknown)"
+  subtree:add(buffer(4,4), "Content Type: " .. buffer(4,4):string() .. " - " ..str)
+  subtree:add_le( citp_pinf_contentType_field, buffer(4,4))
+
+  -- PNam
+  if buffer(4,4):string() == "PNam" then
+    start = 8
+    name=buffer(start):string();
+    pinfo.cols.info:append ("PNam >")   -- info
+    count = string.find(buffer(start):string(),"\0",1)
+    subtree:add(buffer(start, count),"Name: ".. buffer(start):string())
+
+  --PLoc
+  elseif buffer(4,4):string() == "PLoc" then
+    pinfo.cols.info:append ("PLoc >")   -- info
+    listeningport = buffer(8,2):le_uint()
+    subtree:add(citp_pinf_listPort_field, buffer(8,2))
+
+    -- If we listening port is non zero then add to the dissector
+    if listeningport then
+      CITP_add_port(listeningport)
+    end
+    listeningport = 0
+
+    start = 10
+    name = buffer(start):string()
+    count = string.find(buffer(start):string(),"\0",1)
+    subtree:add(citp_pinf_type_field, buffer(start, count))
+    start = start+count
+
+    count = string.find(buffer(start):string(),"\0",1)
+	subtree:add(citp_pinf_name_field, buffer(start, count))
+
+    start = start+count
+    count = string.find(buffer(start):string(),"\0",1)
+	subtree:add(citp_pinf_state_field, buffer(start, count))
+	
+  else
+    pinfo.cols.info:append ("Unknown format or content type")
+  end
+  pinfo.cols.info:append (name)   -- info
+end
 
 function citp_proto.dissector(buffer,pinfo,tree)
   listeningport = 0
@@ -100,18 +267,27 @@ function citp_proto.dissector(buffer,pinfo,tree)
 
   count = 1
   citp_version = string.format("%d.%d",buffer (start,count):le_uint(),buffer (start+1,count):le_uint())
-  subtree:add(buffer(start,count+1), "Version: " .. citp_version)
+--  subtree:add(buffer(start,count+1), "Version: " .. citp_version)
+  
+  subtree:add(citp_base_versionMajor_field, buffer(4,1))
+  subtree:add(citp_base_versionMinor_field, buffer(5,1))
 
-  subtree:add(buffer(6,2), "Request/Response ID: " .. buffer(6,2):le_uint())
+--  subtree:add(buffer(6,2), "Request/Response ID: " .. buffer(6,2):le_uint())
+
+  subtree:add(citp_base_reqRespID_field, buffer(6,2):le_uint())
   message_size = buffer(8,4):le_uint()
   subtree:add(buffer(8,4), "Message Size: " .. message_size)
+  
   subtree:add(buffer(12,2), "Message Part Count: " .. buffer(12,2):le_uint())
   subtree:add(buffer(14,2), "Message Part: " .. buffer(14,2):le_uint())
 
-  str = ct[buffer(16,4):string()] or "(Unknown)"
-  subtree = subtree:add(buffer(16,4), string.format("Content Type: %s - %s, Length: %d",buffer(16,4):string(),
-                                                                            str,
-                                                                            string.len(buffer(20):string())))
+  subtree = subtree:add(citp_base_contentType_field, buffer(16,4))
+
+  contentType = buffer(16,4):string()
+  str = ct[contentType] or "(Unknown)"
+--  subtree = subtree:add(buffer(16,4), string.format("Content Type: %s - %s, Length: %d",buffer(16,4):string(),
+--                                                                            str,
+--                                                                            string.len(buffer(20):string())))
   pinfo.cols.info = string.format("CITP %s >",citp_version) -- info
 
   -- Calculate message size and reassemble PDUs if needed.
@@ -120,90 +296,8 @@ function citp_proto.dissector(buffer,pinfo,tree)
     return
   end
   
-  -- CAEX ------------------------------------------------------------------------
-  -- Capture CITP Extensions
-  if buffer(16,4):string() == "CAEX" then
-    pinfo.cols.info:append ("CAEX >")   -- info
-      
-    caex_code = buffer(20,4):le_uint()
-    str = caex_ct[caex_code] or "(Unknown)"
-  
-    subtree:add(buffer(20,4), "Content Type: " .. string.format("%08x", caex_code) .. " - " ..str)
-    pinfo.cols.info:append (str)
-  
-    if str == "Laser Feed List" then
-      subtree:add( string.format("Source Key: 0x%08x", buffer(24,4):le_uint())) 
-      nFeeds = buffer(28,1):le_uint()
-      subtree:add( "Feed Count: " .. (nFeeds))
-      
-      feedNameStart = 29
-    
-      for i=1,nFeeds do
-        str, l = ucs2ascii(feedNameStart, buffer)
-        subtree:add("Feed " .. (i) .. ": " .. str)
-        feedNameStart = feedNameStart + l
-      end
-	  
-    elseif str == "Laser Feed Frame" then
-      pinfo.cols.info:append (" >Feed " .. buffer(28,1):le_uint())
-      subtree:add( string.format("Source Key: 0x%08x", buffer(24,4):le_uint())) 
-      subtree:add( "Feed Index: " .. buffer(28,1):le_uint())
-	  subtree:add( "Frame Seq Num: " .. buffer(29,4):le_uint())
-	  subtree:add( "Point Count: " .. buffer(33,2):le_uint())
-	  
-    elseif str == "Laser Feed Control" then
-      pinfo.cols.info:append (" >Feed " .. buffer(24,1):le_uint())
-      subtree:add( "Feed Index: " .. buffer(24,1):le_uint())
-	  subtree:add( "Framerate: " .. buffer(25,1):le_uint())
-
-    end
-  
-  end
-
-  -- PINF ------------------------------------------------------------------------
-  -- Peer Information layer
-  if buffer(16,4):string() == "PINF" then
-    name=""
-    pinfo.cols.info:append ("PINF >")   -- info
-    str = ct[buffer(20,4):string()] or "(Unknown)"
-    subtree:add(buffer(20,4), "Content Type: " .. buffer(20,4):string() .. " - " ..str)
-
-    -- PNam
-    if buffer(20,4):string() == "PNam" then
-      start = 24
-      name=buffer(start):string();
-      pinfo.cols.info:append ("PNam >")   -- info
-      count = string.find(buffer(start):string(),"\0",1)
-      subtree:add(buffer(start, count),"Name: ".. buffer(start):string())
-
-    --PLoc
-    elseif buffer(20,4):string() == "PLoc" then
-      pinfo.cols.info:append ("PLoc >")   -- info
-      listeningport = buffer(24,2):le_uint()
-      subtree:add(buffer(24,2), "Listening Port: " .. (listeningport))
-
-      -- If we listening port is non zero then add to the dissector
-      if listeningport then
-        CITP_add_port(listeningport)
-      end
-      listeningport = 0
-
-      start = 26
-      name = buffer(start):string()
-      count = string.find(buffer(start):string(),"\0",1)
-      subtree:add(buffer(start, count),"Type: ".. buffer(start):string())
-      start = start+count
-
-      count = string.find(buffer(start):string(),"\0",1)
-      subtree:add(buffer(start, count),"Name: ".. name)
-
-      start = start+count
-      count = string.find(buffer(start):string(),"\0",1)
-      subtree:add(buffer(start, count),"State: ".. buffer(start):string())
-    else
-    pinfo.cols.info:append ("Unknown format or content type")
-  end
-    pinfo.cols.info:append (name)   -- info
+  if     contentType == "CAEX" then caex_dissector(buffer(16), pinfo, subtree)
+  elseif contentType == "PINF" then pinf_dissector(buffer(16), pinfo, subtree)
   end
 
   -- MSEX ------------------------------------------------------------------------
