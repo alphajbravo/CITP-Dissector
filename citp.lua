@@ -84,6 +84,7 @@ local citp_base_contentType_field     = ProtoField.uint32(  "citp.contentType", 
 local citp_caex_contentType_field     = ProtoField.uint32(  "citp.caex.contentType",  "Content Type", base.HEX, citp_caex_contentTypes)
 local citp_caex_laser_sourceKey_field = ProtoField.uint32(  "citp.caex.laser.sourceKey",  "Source Key", base.HEX)
 local citp_caex_laser_feedIndex_field = ProtoField.uint8(   "citp.caex.laser.feedIndex",  "Feed Index", base.DEC)
+local citp_caex_laser_numPts_field = ProtoField.uint16(   "citp.caex.laser.numPts",  "Number of Points", base.DEC)
                                                             
 -- PINF Fields                                              
 local citp_pinf_contentType_field     = ProtoField.uint32(  "citp.pinf.contentType", "Content Type", base.HEX, citp_pinf_contentTypes)
@@ -103,6 +104,7 @@ citp_proto.fields = {
   citp_caex_contentType_field,
   citp_caex_laser_sourceKey_field,
   citp_caex_laser_feedIndex_field,
+  citp_caex_laser_numPts_field,
   
   citp_pinf_contentType_field,
   citp_pinf_name_field,
@@ -184,8 +186,8 @@ function caex_dissector(buffer, pinfo, subtree)
     subtree:add_le( citp_caex_laser_sourceKey_field, buffer(8,4)) 
     subtree:add( citp_caex_laser_feedIndex_field, buffer(12,1))
     subtree:add( "Frame Seq Num: " .. buffer(13,4):le_uint())
-    subtree:add( "Point Count: " .. buffer(17,2):le_uint())
-    
+    subtree:add_le( citp_caex_laser_numPts_field, buffer(17,2))
+	
   elseif str == "Laser Feed Control" then
     pinfo.cols.info:append (" >Feed " .. buffer(8,1):le_uint())
     subtree:add( citp_caex_laser_feedIndex, buffer(8,1))
